@@ -20,7 +20,8 @@ static bool g_debug = false;
 
 void DebugPrint(const std::string& message)
 {
-    if (g_debug) {
+    if (g_debug)
+    {
         std::cerr << "[RECEIVER] " << message << std::endl;
     }
 }
@@ -38,7 +39,8 @@ void MaybeDelayAck()
     static std::random_device rd;
     static std::mt19937 gen(rd());
     static std::uniform_real_distribution<> dis(0.0, 1.0);
-    if (dis(gen) < DELAY_PROBABILITY) {
+    if (dis(gen) < DELAY_PROBABILITY)
+    {
         std::uniform_int_distribution<> delayMs(50, 200);
         usleep(delayMs(gen) * 1000);
     }
@@ -53,13 +55,15 @@ std::vector<uint8_t> BuildAck(uint32_t ackNum)
 
 std::optional<std::pair<uint32_t, std::vector<uint8_t>>> ParsePacket(const uint8_t* buffer, size_t length)
 {
-    if (length < HEADER_SIZE) {
+    if (length < HEADER_SIZE)
+    {
         return std::nullopt;
     }
     uint32_t seqNum;
     std::memcpy(&seqNum, buffer, sizeof(seqNum));
     std::vector<uint8_t> payload;
-    if (length > HEADER_SIZE) {
+    if (length > HEADER_SIZE)
+    {
         payload = std::vector(buffer + HEADER_SIZE, buffer + length);
     }
     return std::make_pair(seqNum, payload);
@@ -67,7 +71,8 @@ std::optional<std::pair<uint32_t, std::vector<uint8_t>>> ParsePacket(const uint8
 
 int main(int argc, char* argv[])
 {
-    if (argc < 3) {
+    if (argc < 3)
+    {
         std::cerr << "Usage: " << argv[0] << " <receiver_port> <output_file> [-d]" << std::endl;
         return EXIT_FAILURE;
     }
@@ -77,7 +82,8 @@ int main(int argc, char* argv[])
     g_debug = (argc > 3 && std::string(argv[3]) == "-d");
 
     int sockFd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockFd < 0) {
+    if (sockFd < 0)
+    {
         perror("socket");
         return EXIT_FAILURE;
     }
@@ -87,14 +93,16 @@ int main(int argc, char* argv[])
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(port);
 
-    if (bind(sockFd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) < 0) {
+    if (bind(sockFd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) < 0)
+    {
         perror("bind");
         close(sockFd);
         return EXIT_FAILURE;
     }
 
     std::ofstream outFile(outputFile, std::ios::binary);
-    if (!outFile) {
+    if (!outFile)
+    {
         std::cerr << "Error: Cannot create output file " << outputFile << std::endl;
         close(sockFd);
         return EXIT_FAILURE;
@@ -106,7 +114,8 @@ int main(int argc, char* argv[])
     bool receivedAny = false;
     static uint32_t lastAck = 0;
 
-    while (true) {
+    while (true)
+    {
         fd_set readFds;
         FD_ZERO(&readFds);
         FD_SET(sockFd, &readFds);
@@ -115,19 +124,23 @@ int main(int argc, char* argv[])
         tv.tv_usec = 0;
 
         int activity = select(sockFd + 1, &readFds, nullptr, nullptr, &tv);
-        if (activity <= 0) {
-            if (receivedAny) {
+        if (activity <= 0)
+        {
+            if (receivedAny)
+            {
                 DebugPrint("Timeout: Assuming end of transmission");
                 break;
-            } else {
+            }
+            else
+            {
                 std::cerr << "Error: No data received within timeout" << std::endl;
                 break;
             }
         }
 
         uint8_t buffer[MAX_PACKET_SIZE];
-        ssize_t recvBytes = recvfrom(sockFd, buffer, MAX_PACKET_SIZE, 0,
-                                     reinterpret_cast<sockaddr*>(&senderAddr), &senderAddrLen);
+        ssize_t recvBytes = recvfrom(sockFd, buffer, MAX_PACKET_SIZE, 0, reinterpret_cast<sockaddr*>(&senderAddr),
+                                     &senderAddrLen);
         if (recvBytes <= 0) continue;
 
         auto packet = ParsePacket(buffer, recvBytes);
@@ -137,7 +150,8 @@ int main(int argc, char* argv[])
         const auto& payload = packet->second;
         receivedAny = true;
 
-        if (seqNum == expectedSeqNum) {
+        if (seqNum == expectedSeqNum)
+        {
             outFile.write(reinterpret_cast<const char*>(payload.data()), payload.size());
             outFile.flush();
             expectedSeqNum++;
@@ -146,12 +160,15 @@ int main(int argc, char* argv[])
         }
 
         std::vector<uint8_t> ackPacket = BuildAck(lastAck);
-        if (!ShouldDropAck()) {
+        if (!ShouldDropAck())
+        {
             MaybeDelayAck();
-            sendto(sockFd, ackPacket.data(), ackPacket.size(), 0,
-                   reinterpret_cast<sockaddr*>(&senderAddr), senderAddrLen);
+            sendto(sockFd, ackPacket.data(), ackPacket.size(), 0, reinterpret_cast<sockaddr*>(&senderAddr),
+                   senderAddrLen);
             DebugPrint("Sent ACK #" + std::to_string(lastAck));
-        } else {
+        }
+        else
+        {
             DebugPrint("Dropped ACK #" + std::to_string(lastAck) + " (simulated loss)");
         }
     }

@@ -23,7 +23,8 @@ static bool g_debug = false;
 
 void DebugPrint(const std::string& message)
 {
-    if (g_debug) {
+    if (g_debug)
+    {
         std::cerr << "[SENDER] " << message << std::endl;
     }
 }
@@ -41,7 +42,8 @@ void MaybeDelayPacket()
     static std::random_device rd;
     static std::mt19937 gen(rd());
     static std::uniform_real_distribution<> dis(0.0, 1.0);
-    if (dis(gen) < DELAY_PROBABILITY) {
+    if (dis(gen) < DELAY_PROBABILITY)
+    {
         std::uniform_int_distribution<> delayMs(50, 300);
         usleep(delayMs(gen) * 1000);
     }
@@ -51,7 +53,8 @@ std::vector<uint8_t> BuildPacket(uint32_t seqNum, const std::vector<uint8_t>& da
 {
     std::vector<uint8_t> packet(HEADER_SIZE + data.size());
     std::memcpy(packet.data(), &seqNum, sizeof(seqNum));
-    if (!data.empty()) {
+    if (!data.empty())
+    {
         std::memcpy(packet.data() + HEADER_SIZE, data.data(), data.size());
     }
     return packet;
@@ -59,7 +62,8 @@ std::vector<uint8_t> BuildPacket(uint32_t seqNum, const std::vector<uint8_t>& da
 
 std::optional<uint32_t> ParseAck(const uint8_t* buffer, size_t length)
 {
-    if (length < sizeof(uint32_t)) {
+    if (length < sizeof(uint32_t))
+    {
         return std::nullopt;
     }
     uint32_t ackNum;
@@ -69,7 +73,8 @@ std::optional<uint32_t> ParseAck(const uint8_t* buffer, size_t length)
 
 int main(int argc, char* argv[])
 {
-    if (argc < 4) {
+    if (argc < 4)
+    {
         std::cerr << "Usage: " << argv[0] << " <receiver_host> <receiver_port> <file.txt> [-d]" << std::endl;
         return EXIT_FAILURE;
     }
@@ -80,7 +85,8 @@ int main(int argc, char* argv[])
     g_debug = (argc > 4 && std::string(argv[4]) == "-d");
 
     std::ifstream file(fileName, std::ios::binary);
-    if (!file) {
+    if (!file)
+    {
         std::cerr << "Error: Cannot open file " << fileName << std::endl;
         return EXIT_FAILURE;
     }
@@ -88,7 +94,8 @@ int main(int argc, char* argv[])
     file.close();
 
     int sockFd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockFd < 0) {
+    if (sockFd < 0)
+    {
         perror("socket");
         return EXIT_FAILURE;
     }
@@ -96,7 +103,8 @@ int main(int argc, char* argv[])
     sockaddr_in receiverAddr = {};
     receiverAddr.sin_family = AF_INET;
     receiverAddr.sin_port = htons(receiverPort);
-    if (inet_pton(AF_INET, receiverHost.c_str(), &receiverAddr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, receiverHost.c_str(), &receiverAddr.sin_addr) <= 0)
+    {
         std::cerr << "Error: Invalid IP address " << receiverHost << std::endl;
         close(sockFd);
         return EXIT_FAILURE;
@@ -104,11 +112,13 @@ int main(int argc, char* argv[])
 
     std::vector<std::vector<uint8_t>> packets;
     size_t totalBytes = fileData.size();
-    for (size_t i = 0; i < totalBytes; i += MAX_DATA_SIZE) {
+    for (size_t i = 0; i < totalBytes; i += MAX_DATA_SIZE)
+    {
         size_t chunkSize = std::min(MAX_DATA_SIZE, totalBytes - i);
         packets.emplace_back(fileData.begin() + i, fileData.begin() + i + chunkSize);
     }
-    if (packets.empty()) {
+    if (packets.empty())
+    {
         packets.emplace_back();
     }
     uint32_t totalPackets = static_cast<uint32_t>(packets.size());
@@ -120,21 +130,28 @@ int main(int argc, char* argv[])
     size_t retransmissions = 0;
     auto startTime = std::chrono::steady_clock::now();
 
-    for (uint32_t i = 0; i < totalPackets; ++i) {
+    for (uint32_t i = 0; i < totalPackets; ++i)
+    {
         sentPackets[i] = BuildPacket(i, packets[i]);
     }
 
-    while (sendBase < totalPackets) {
-        while (nextSeqNum < sendBase + WINDOW_SIZE && nextSeqNum < totalPackets) {
-            if (!ShouldDropPacket()) {
+    while (sendBase < totalPackets)
+    {
+        while (nextSeqNum < sendBase + WINDOW_SIZE && nextSeqNum < totalPackets)
+        {
+            if (!ShouldDropPacket())
+            {
                 MaybeDelayPacket();
                 ssize_t sentBytes = sendto(sockFd, sentPackets[nextSeqNum].data(), sentPackets[nextSeqNum].size(), 0,
                                            reinterpret_cast<sockaddr*>(&receiverAddr), sizeof(receiverAddr));
-                if (sentBytes > 0) {
+                if (sentBytes > 0)
+                {
                     sentTime[nextSeqNum] = std::chrono::steady_clock::now();
                     DebugPrint("Sent packet #" + std::to_string(nextSeqNum));
                 }
-            } else {
+            }
+            else
+            {
                 DebugPrint("Dropped packet #" + std::to_string(nextSeqNum) + " (simulated loss)");
             }
             nextSeqNum++;
@@ -147,18 +164,22 @@ int main(int argc, char* argv[])
         tv.tv_sec = 0;
         tv.tv_usec = 10000; // 10 ms
 
-        if (int activity = select(sockFd + 1, &readFds, nullptr, nullptr, &tv); activity > 0) {
+        if (int activity = select(sockFd + 1, &readFds, nullptr, nullptr, &tv); activity > 0)
+        {
             uint8_t ackBuffer[sizeof(uint32_t)];
             ssize_t recvBytes = recvfrom(sockFd, ackBuffer, sizeof(ackBuffer), 0, nullptr, nullptr);
             auto ackNum = ParseAck(ackBuffer, recvBytes);
-            if (ackNum && *ackNum >= sendBase) {
+            if (ackNum && *ackNum >= sendBase)
+            {
                 sendBase = *ackNum + 1;
                 DebugPrint("Received ACK #" + std::to_string(*ackNum) + ", new base = " + std::to_string(sendBase));
             }
         }
 
         auto now = std::chrono::steady_clock::now();
-        if (auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - sentTime[sendBase]).count(); elapsed > TIMEOUT_MS) {
+        if (auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - sentTime[sendBase]).count();
+            elapsed > TIMEOUT_MS)
+        {
             DebugPrint("Timeout on base packet #" + std::to_string(sendBase) + ", retransmitting window");
             nextSeqNum = sendBase;
             retransmissions += (std::min(sendBase + WINDOW_SIZE, totalPackets) - sendBase);
