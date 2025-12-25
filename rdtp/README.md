@@ -46,3 +46,21 @@
   ```cpp
   constexpr double LOSS_PROBABILITY = 0.2;
   constexpr double DELAY_PROBABILITY = 0.2;
+
+## Инструкция по сборке и запуску
+
+### Требования
+- Операционная система: **Linux** (рекомендуется Ubuntu/Debian).
+- Компилятор с поддержкой **C++20** (например, `g++` версии 10 или новее).
+- Установленный **CMake** версии 3.22 или выше.
+- Стандартная библиотека разработчика (`build-essential` или аналог).
+
+### Сборка
+1. Убедитесь, что в текущей директории находятся следующие файлы:
+  - `rdtSender.cpp`
+  - `rdtReceiver.cpp`
+  - `CMakeLists.txt`
+2. Выполните команды в терминале:
+   ```bash
+   cmake -S . -B build
+   cmake --build build
