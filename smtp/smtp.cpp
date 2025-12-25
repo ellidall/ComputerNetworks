@@ -17,8 +17,7 @@ const std::string RECIPIENT_EMAIL = "pokemonivan32@gmail.com";
 
 std::string Base64Encode(const std::string& input)
 {
-    static const char base64Chars[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static const char base64Chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     std::string output;
     int val = 0, valb = -6;
@@ -36,8 +35,7 @@ std::string Base64Encode(const std::string& input)
     {
         output.push_back(base64Chars[((val << 8) >> (valb + 8)) & 0x3F]);
     }
-    while (output.size() % 4)
-        output.push_back('=');
+    while (output.size() % 4) output.push_back('=');
     return output;
 }
 
@@ -188,8 +186,7 @@ bool PerformSmtpSession(const int socketFd)
         {
             buf[bytes] = '\0';
             resp += buf;
-            if (bytes >= 2 && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n')
-                break;
+            if (bytes >= 2 && buf[bytes - 2] == '\r' && buf[bytes - 1] == '\n') break;
         }
         return resp;
     };
@@ -313,14 +310,10 @@ bool PerformSmtpSession(const int socketFd)
         return false;
     }
 
-    const std::string messageBody =
-        "From: " + SENDER_EMAIL + "\r\n"
-        "To: " + RECIPIENT_EMAIL + "\r\n"
-        "Subject: Test\r\n"
-        "\r\n"
-        "Hello! This is test message!\r\n"
-        ".\r\n";
-    if (const int written = SSL_write(ssl, messageBody.c_str(), static_cast<int>(messageBody.size())); written != static_cast<int>(messageBody.size()))
+    const std::string messageBody = "From: " + SENDER_EMAIL + "\r\n" "To: " + RECIPIENT_EMAIL + "\r\n"
+                                    "Subject: Test\r\n" "\r\n" "Hello! This is test message!\r\n" ".\r\n";
+    if (const int written = SSL_write(ssl, messageBody.c_str(), static_cast<int>(messageBody.size()));
+        written != static_cast<int>(messageBody.size()))
     {
         std::cerr << "Failed to send message body" << std::endl;
         SSL_free(ssl);
